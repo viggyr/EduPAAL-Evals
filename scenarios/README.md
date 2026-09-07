@@ -49,7 +49,7 @@ Derived ground truths:
 | S2 | Struggling learner | 1 | a1 Linear Equations, a2 Quadratic Equations | 8; strong dialogue vs weak quizzes on a1 | mid(6), final(8) | Disagreement handling; GT a1 intermediate despite two weak quizzes |
 | S3 | Prerequisites | 1 | pa Variables → pb Expressions → pc Equations | 8; pa mastered, pb started, pc untouched | mid(6), final(8) | `next_topic` must never return a topic whose prereqs aren't advanced |
 | S4 | Plateau | 1 | p1 Probability | 6, all 0.68–0.72 | mid(4), final(6) | Advanced predictions here are false positives; GT stays intermediate |
-| S5 | Isolation | 2 (A, B) | x1 Photosynthesis, x2 Cell Division | 8 interleaved; A masters x1, B barely starts x2 | mid(4), final(8) | No cross-learner leakage: A's x2 and B's x1 must stay unknown |
+| S5 | Isolation (optional; excluded from default suite) | 2 (A, B) | x1 Photosynthesis, x2 Cell Division | 8 interleaved; A masters x1, B barely starts x2 | mid(4), final(8) | No cross-learner leakage: A's x2 and B's x1 must stay unknown |
 
 ## Evidence dicts
 

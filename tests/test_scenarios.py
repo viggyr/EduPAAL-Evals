@@ -6,7 +6,7 @@ asserted explicitly so a rubric change fails loudly here, not silently in a
 report.
 """
 
-from scenarios import get_scenario, ground_truth_levels, ground_truth_next_topic, ground_truth_weakest
+from scenarios import ALL_SCENARIOS, get_scenario, ground_truth_levels, ground_truth_next_topic, ground_truth_weakest
 
 
 def _levels(sid, seed=7, upto=None):
@@ -23,7 +23,8 @@ def test_same_seed_identical_stream():
 
 
 def test_evidence_ids_stable_and_unique():
-    for sid in ("S1", "S2", "S3", "S4", "S5"):
+    # Default suite plus the retained-but-optional S5 builder.
+    for sid in ALL_SCENARIOS + ["S5"]:
         spec = get_scenario(sid, 7)
         ids = [e["id"] for e in spec.evidence]
         assert len(ids) == len(set(ids)), sid

@@ -276,7 +276,7 @@ def main() -> int:
     ap.add_argument("--systems", default="edupaal",
                     help="comma-separated: edupaal,mem0,memos")
     ap.add_argument("--scenarios", default=",".join(ALL_SCENARIOS),
-                    help="comma-separated: S1..S5")
+                    help="comma-separated: S1..S4 (S5 builder exists but is excluded from the default suite)")
     ap.add_argument("--seed", type=int, default=7)
     args = ap.parse_args()
     args.systems = [s.strip() for s in args.systems.split(",") if s.strip()]

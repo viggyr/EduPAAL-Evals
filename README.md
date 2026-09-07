@@ -95,8 +95,11 @@ evidence→latent-mastery rubric):
   whose prerequisites are unmet
 - **S4 plateau** — evidence stops at Intermediate; Advanced predictions are
   false positives
-- **S5 isolation** — two learners, interleaved evidence, no cross-learner
-  leakage
+
+S5 (two-learner isolation) exists as a builder but is excluded from the
+default suite: learner isolation is structural (learner-scoped records)
+and was already covered by the multi-learner scale test in the EduPAAL
+validation battery.
 
 Ground truth is generated independently of EduPAAL's outputs.
 

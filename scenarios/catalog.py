@@ -1,4 +1,9 @@
-"""Scenario catalog: S1..S5. Each builder is deterministic for (id, seed)."""
+"""Scenario catalog: S1..S4 form the default suite. Each builder is
+deterministic for (id, seed). S5's builder is retained and still
+addressable via get_scenario("S5", seed), but it is excluded from the
+default suite: learner isolation is enforced structurally by
+learner-scoped records and was already covered by the multi-learner
+scale test in the EduPAAL validation battery."""
 
 from __future__ import annotations
 
@@ -167,7 +172,9 @@ _BUILDERS: Dict[str, object] = {
     "S5": _s5,
 }
 
-ALL_SCENARIOS = ["S1", "S2", "S3", "S4", "S5"]
+ALL_SCENARIOS = ["S1", "S2", "S3", "S4"]
+# S5 is intentionally not in the default suite (see module docstring);
+# get_scenario("S5", seed) still works for explicit use.
 
 
 def get_scenario(scenario_id: str, seed: int) -> ScenarioSpec:
