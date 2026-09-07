@@ -9,6 +9,25 @@ assessment.
 
 Requires the baselines extra (``pip install "edupaal-evals[baselines]"``) and
 the judge environment (``EDUPAAL_EVALS_LLM_*``). Both fail loudly.
+
+Wiring notes (verified against the installed mem0ai source):
+
+- Embeddings are local fastembed ``BAAI/bge-small-en-v1.5`` (384 dims); the
+  vector-store config sets ``embedding_model_dims=384`` to match because
+  mem0's default is 1536 (OpenAI's) and a mismatch fails every search.
+- fastembed's default model cache is ``tempfile.gettempdir()`` (ephemeral),
+  so the leg pins ``FASTEMBED_CACHE_PATH`` to ``~/.cache/edupaal-evals``.
+  Environment-only change: mem0's behavior is untouched.
+- Storage is hermetic: each instance gets its own temp-dir Qdrant folder, so
+  any number of Mem0 legs can coexist in one process (local-mode Qdrant
+  takes an exclusive per-folder lock). mem0's product telemetry is disabled
+  (``MEM0_TELEMETRY=false``): besides the PostHog phone-home, it opens a
+  second Qdrant client at the fixed path ``~/.mem0/migrations_qdrant``,
+  which breaks multi-instance use. Documented opt-out; memory behavior
+  untouched.
+- Token accounting covers the strict-schema judge calls only; mem0's
+  internal extraction LLM calls (``infer=True``) are not visible to the
+  harness and are excluded from reported totals.
 """
 
 from __future__ import annotations
@@ -29,6 +48,12 @@ class Mem0System(SystemUnderTest):
         super().__init__(scenario)
         # Fail loudly before touching any framework: no env => no evaluation.
         env = _required_env()
+        # mem0's product telemetry (PostHog phone-home) also spins up a second
+        # Qdrant client at a FIXED path (~/.mem0/migrations_qdrant), so two live
+        # Memory instances in one process collide on its exclusive folder lock.
+        # This is mem0's documented opt-out; memory behavior is untouched.
+        # Must be set before the first mem0 import (read at import time).
+        os.environ.setdefault("MEM0_TELEMETRY", "false")
         try:
             from mem0 import Memory
         except Exception as exc:
@@ -37,6 +62,14 @@ class Mem0System(SystemUnderTest):
                 'pip install "edupaal-evals[baselines]".'
             ) from exc
         self.judge = LLMJudge()  # also fail-loud on missing env
+        # Persistent embedder cache (see module docstring). Must be set before
+        # Memory.from_config constructs the fastembed embedder.
+        os.environ.setdefault(
+            "FASTEMBED_CACHE_PATH",
+            os.path.join(
+                os.path.expanduser("~"), ".cache", "edupaal-evals", "fastembed"
+            ),
+        )
         self._tmp = tempfile.TemporaryDirectory(prefix="edupaal-evals-mem0-")
         config = {
             "llm": {
