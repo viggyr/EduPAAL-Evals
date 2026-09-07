@@ -1,0 +1,34 @@
+[project]
+name = "edupaal-evals"
+version = "0.1.0"
+description = "Evaluation harness comparing EduPAAL's learning memory against baseline general memory infrastructure (Mem0, MemOS)"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "viggyr" }]
+# Pinned to the validated EduPAAL commit so eval numbers are reproducible.
+dependencies = [
+    "edupaal @ git+https://github.com/viggyr/EduPAAL@ff396ca",
+]
+
+[project.optional-dependencies]
+# Baseline legs: native Mem0 / MemOS plus the OpenAI-compatible judge client.
+baselines = [
+    "mem0ai",
+    "MemoryOS",
+    "openai>=1.0",
+]
+# Unit tests for scenarios, metrics, and fail-loud guarantees.
+test = [
+    "pytest",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["systems*", "scenarios*", "metrics*"]
