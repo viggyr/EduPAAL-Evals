@@ -26,9 +26,11 @@ MemOS wiring notes (verified against the installed MemoryOS source):
   cube. Arbitrary learner IDs are NOT assumed to work.
 - Storage is hermetic: ``MEMOS_BASE_PATH`` points at a per-instance temp dir
   (set before importing memos, since ``memos.settings`` reads it at import
-  time). Note this is process-global; running two MemOS legs in one process
-  shares the base path, but per-instance cube/user ids keep collections
-  separate.
+  time). The base path is process-global, so the first instance wins; each
+  scenario additionally gets its own qdrant folder because QdrantClient's
+  local mode takes an exclusive per-folder file lock — two open clients on
+  one folder in the same process is a hard error. Per-instance cube/user ids
+  keep collections separate regardless.
 """
 
 from __future__ import annotations
@@ -79,14 +81,19 @@ class MemOSSystem(SystemUnderTest):
         embedder_model = os.environ.get(ENV_EMBEDDER_MODEL, DEFAULT_EMBEDDER_MODEL)
         # Hermetic storage: memos.settings reads MEMOS_BASE_PATH at import time,
         # so it must be set before the first memos import in this process.
-        # Kept alive until process exit (see _TMPDIRS); per-instance cube/user
-        # ids keep scenarios isolated on the shared base path.
+        # Kept alive until process exit (see _TMPDIRS). Each scenario also
+        # gets its own qdrant folder (see below) because local-mode Qdrant
+        # takes an exclusive per-folder lock.
         self._tmp = tempfile.TemporaryDirectory(prefix="edupaal-evals-memos-")
         _TMPDIRS.append(self._tmp)
         os.environ.setdefault("MEMOS_BASE_PATH", self._tmp.name)
         try:
+            from memos.mem_cube.general import GeneralMemCube
             from memos.mem_os.main import MOS
-            from memos.mem_os.utils.default_config import get_default
+            from memos.mem_os.utils.default_config import (
+                get_default_config,
+                get_default_cube_config,
+            )
         except Exception as exc:
             raise RuntimeError(
                 "MemoryOS is not installed. Install the baselines extra: "
@@ -95,13 +102,24 @@ class MemOSSystem(SystemUnderTest):
         self.judge = LLMJudge()  # also fail-loud on missing env
         # Per-instance ids keep cubes/collections isolated between scenarios.
         self._instance_uid = f"edupaal-evals-{uuid.uuid4().hex[:12]}"
-        mos_config, default_cube = get_default(
+        # get_default() would also work, but it builds the cube internally;
+        # we need to set a per-scenario qdrant path on the cube config first
+        # (QdrantClient local mode forbids two open clients on one folder).
+        # The native ingestion/extraction/retrieval pipeline is otherwise
+        # byte-identical to get_default().
+        _cfg_kwargs = dict(
             openai_api_key=env["EDUPAAL_EVALS_LLM_API_KEY"],
             openai_api_base=env["EDUPAAL_EVALS_LLM_BASE_URL"],
             user_id=self._instance_uid,
             model_name=env["EDUPAAL_EVALS_LLM_MODEL"],
             embedder_model=embedder_model,
         )
+        mos_config = get_default_config(**_cfg_kwargs)
+        cube_config = get_default_cube_config(**_cfg_kwargs)
+        cube_config.text_mem.config.vector_db.config.path = os.path.join(
+            self._tmp.name, ".memos", "qdrant"
+        )
+        default_cube = GeneralMemCube(cube_config)
         self.mos = MOS(mos_config)
         self._cube_id = f"cube_{self._instance_uid}"
         self.mos.register_mem_cube(default_cube, mem_cube_id=self._cube_id)
