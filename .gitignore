@@ -8,3 +8,5 @@ build/
 results/*/
 !results/.gitkeep
 .DS_Store
+
+.memos/

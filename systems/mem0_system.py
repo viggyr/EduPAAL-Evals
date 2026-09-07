@@ -53,7 +53,15 @@ class Mem0System(SystemUnderTest):
             },
             "vector_store": {
                 "provider": "qdrant",
-                "config": {"path": os.path.join(self._tmp.name, "qdrant")},
+                "config": {
+                    "path": os.path.join(self._tmp.name, "qdrant"),
+                    # Must match the fastembed model above (bge-small-en-v1.5
+                    # is 384 dims). mem0's MemoryConfig default is 1536 (the
+                    # OpenAI default); without this the collection is created
+                    # at 1536 while vectors are embedded at 384 and every
+                    # vector-store search fails with a shape mismatch.
+                    "embedding_model_dims": 384,
+                },
             },
         }
         self.memory = Memory.from_config(config)
@@ -79,7 +87,11 @@ class Mem0System(SystemUnderTest):
         return self._judgments[key]
 
     def _run_judge(self, learner_id: str):
-        res = self.memory.search(probe_query(learner_id), user_id=learner_id, limit=30)
+        # mem0 >= 1.1: entity scoping moved from top-level kwargs to filters,
+        # and the result-count knob is top_k.
+        res = self.memory.search(
+            probe_query(learner_id), filters={"user_id": learner_id}, top_k=30
+        )
         memories = [r.get("memory", "") for r in res.get("results", []) if r.get("memory")]
         judgment = self.judge.judge(
             learner_id=learner_id,
